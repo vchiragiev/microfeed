@@ -28,11 +28,11 @@ class FeedHandler:
         # 3. remove the node from the tree if no more orders with same price
         # new_order fully filled nothing else to do
         if new_order.quantity == matched_order.quantity:
-            new_order.quantity = 0
             self.expected_trades.append(Trade(matched_order.quantity, matched_order.price))  # add expected Trade
             self.expected_x_orders.add(new_order.order_id)                    # add expected new_order(X)
             self.expected_x_orders.add(matched_order.order_id)                # add expected matched_order(X)
-            self.orders_by_id.pop(matched_order_node.orders.pop(0).order_id)  # del matched_order from dict and tree
+            self.orders_by_id.pop(matched_order_node.orders.popleft().order_id)  # del matched_order from dict and tree
+            new_order.quantity = 0
             if len(matched_order_node.orders) == 0:
                 matched_order_node.remove_me()
 
@@ -41,10 +41,10 @@ class FeedHandler:
         # 2. register expected messages: trade, new_order(X)
         # new_order fully filled nothing else to do
         elif new_order.quantity < matched_order.quantity:
-            new_order.quantity = 0
             matched_order.quantity = matched_order.quantity - new_order.quantity
             self.expected_trades.append(Trade(new_order.quantity, matched_order.price))  # add expected Trade
             self.expected_x_orders.add(new_order.order_id)                     # add expected new_order(X)
+            new_order.quantity = 0
 
         # new_order.qty > matched_order.qty
         # 1. decrease new_order.qty
@@ -55,8 +55,8 @@ class FeedHandler:
         else:
             new_order.quantity = new_order.quantity - matched_order.quantity
             self.expected_trades.append(Trade(matched_order.quantity, matched_order.price))
-            self.expected_x_orders.add(new_order.order_id)                    # add expected matched_order(X)
-            self.orders_by_id.pop(matched_order_node.orders.pop(0).order_id)  # del matched_order from dict and tree
+            self.expected_x_orders.add(matched_order.order_id)                    # add expected matched_order(X)
+            self.orders_by_id.pop(matched_order_node.orders.popleft().order_id)  # del matched_order from dict and tree
             if len(matched_order_node.orders) == 0:
                 matched_order_node.remove_me()
             else:
@@ -159,7 +159,7 @@ class FeedHandler:
         # pop trades from expected_trades deque till match is found
         while len(self.expected_trades) > 0:
             # operator __eq__ is overloaded
-            if trade == self.expected_trades.pop(0):
+            if trade == self.expected_trades.popleft():
                 # found an expected trade. return without error
                 return
 
@@ -202,7 +202,7 @@ class FeedHandler:
         print(node.price, quantities)
 
     def print_book(self):
-        print(">>> Book <<<")
+        print("\n>>> Book <<<")
         self.s_orders_by_price.travers_reverse(lambda node: self.print_node("S", node))
         print("---")
         self.b_orders_by_price.travers_reverse(lambda node: self.print_node("B", node))

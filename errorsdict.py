@@ -19,7 +19,7 @@ class ErrorsDictionary:
         self.__errors_dict__[error_enum].append(error_message)
 
     def print(self):
-        print(">>> Errors <<<")
+        print("\n>>> Errors <<<")
         for key in self.__errors_dict__:
             for error in self.__errors_dict__[key]:
                 print(str.format("{}:{}", key, error))
