@@ -1,11 +1,11 @@
 from enums import ErrorEnum
+from typing import Dict, List
 
 
 class ErrorsDictionary:
 
-    @classmethod
-    def init(cls):
-        cls.__errors_dict__ = \
+    def __init__(self):
+        self.__errors_dict__: Dict[ErrorEnum, List] = \
             {
                 ErrorEnum.CorruptedMessage: list(),
                 ErrorEnum.InvalidValue: list(),
@@ -15,13 +15,11 @@ class ErrorsDictionary:
                 ErrorEnum.TradeWithNoOrder: list(),
             }
 
-    @classmethod
-    def add(cls, error_enum, error_message):
-        cls.__errors_dict__[error_enum].append(error_message)
+    def add(self, error_enum, error_message):
+        self.__errors_dict__[error_enum].append(error_message)
 
-    @classmethod
-    def print(cls):
+    def print(self):
         print(">>> Errors <<<")
-        for key in cls.__errors_dict__:
-            for error in cls.__errors_dict__[key]:
-                print(str.format("{}:{}",key, error))
+        for key in self.__errors_dict__:
+            for error in self.__errors_dict__[key]:
+                print(str.format("{}:{}", key, error))

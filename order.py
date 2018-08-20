@@ -1,52 +1,44 @@
-from enums import SideEnum, ActionEnum
+from enums import SideEnum
 from exceptions import CorruptedMessageError, InvalidValueError
+from typing import List
+import config
 
 
 class Order:
     def __init__(self, order_id: int, side: SideEnum, quantity: int, price: float):
+
+        #  if MAX_PRICE >= price <= MIN_PRICE:
+        #  raise InvalidValueError("Invalid price: " + str(self.price))
+        #  from main import MAX_PRICE, MIN_PRICE
+
         self.order_id = order_id
         self.side = side
         self.quantity = quantity
         self.price = price
 
-    def __init__(self, values):
+    @classmethod
+    def from_list(cls, values: List):
         if len(values) != 4:
             raise CorruptedMessageError("Unexpected number of values")
-
         try:
-            self.order_id = int(values[0])
-            self.side = SideEnum[values[1]]
-            self.quantity = int(values[2])
-            self.price = float(values[3])
+            order_id = int(values[0])
+            side = SideEnum[values[1]]
+            quantity = int(values[2])
+            price = float(values[3])
         except Exception as ex:
             raise InvalidValueError("Invalid value", ex)
 
-        if self.order_id <= 0:
-            raise InvalidValueError("Invalid orderId: " + str(self.order_id))
+        if order_id <= 0:
+            raise InvalidValueError("Invalid orderId: " + str(order_id))
 
-        if self.quantity <= 0:
-            raise InvalidValueError("Invalid quantity: " + str(self.quantity))
+        if quantity <= 0:
+            raise InvalidValueError("Invalid quantity: " + str(quantity))
 
-        if self.price <= 0:
-            raise InvalidValueError("Invalid price: " + str(self.price))
+        if config.MIN_PRICE_THRESHOLD >= price or price >= config.MAX_PRICE_THRESHOLD:
+            raise InvalidValueError("Invalid price: " + str(price))
 
-    def clone(self):
-        return Order(self.order_id, self.side, self.quantity, self.price)
-
-    def to_string(self):
-        return str.format("orderId={} side={} quantity={} price={}", self.order_id, self.side, self.quantity, self.price)
-
-
-class OrderMessage:
-
-    def __init__(self, action: ActionEnum, order: Order):
-        self.action = action
-        self.order = order
-
-    def __init__(self, action: ActionEnum, values: str):
-        self.action = action
-        self.order = Order(values)
+        return cls(order_id, side, quantity, price)
 
     def to_string(self):
-        return str.format("action={} [order={}]", self.action, self.order.to_string())
-
+        return str.format("orderId={} side={} quantity={} price={}",
+                          self.order_id, self.side, self.quantity, self.price)

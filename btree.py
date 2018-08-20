@@ -1,4 +1,6 @@
+from collections import deque
 from order import Order
+from typing import Deque
 
 
 class Tree:
@@ -7,7 +9,9 @@ class Tree:
         self.left: Tree = None
         self.right: Tree = None
         self.price: float = price
-        self.orders: [Order] = [order]
+        self.orders: Deque[Order] = deque()
+        if order is not None:
+            self.orders.append(order)
 
     def insert(self, price, order=None):
         if price < self.price:
@@ -23,7 +27,8 @@ class Tree:
             else:
                 return self.right.insert(price, order)
         else:
-            self.orders.append(order)
+            if order is not None:
+                self.orders.append(order)
             return self
 
     def travers(self, function_ref):
@@ -49,13 +54,13 @@ class Tree:
         if self.left is None:
             return self
         else:
-            return self.left.leftmost()
+            return self.left.find_leftmost_node()
 
     def find_rightmost_node(self):
         if self.right is None:
             return self
         else:
-            return self.right.find_rightmost()
+            return self.right.find_rightmost_node()
 
     def find(self, price):
         if price < self.price:

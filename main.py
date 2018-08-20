@@ -1,30 +1,25 @@
 import csv
 import argparse
 from feedhandler import FeedHandler
-from errorsdict import ErrorsDictionary
-
-
-def print_messages(messages):
-    print(">>> Messages <<<")
-    for message in messages:
-        print(message.to_string())
+import config
 
 
 def main(file_name):
-    ErrorsDictionary.init()
     csv_file = open(file_name, "r")
-    csv_file_reader = csv.reader(csv_file )
-    feed = FeedHandler()
+    csv_file_reader = csv.reader(csv_file)
+    feed_handler = FeedHandler()
     for messageValues in csv_file_reader:
-        feed.process_message(messageValues)
-    print_messages(feed.messages)
-    # ErrorsDictionary.print()
-    feed.print_book()
+        feed_handler.process_message(messageValues)
+    feed_handler.print_errors()
+    feed_handler.print_book()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process messages')
     parser.add_argument('file_name')
+    parser.add_argument('--min_price', required=False, type=float, help="min price threshold", default=0.0001)
+    parser.add_argument('--max_price', required=False, type=float, help="max price threshold", default=1100.0)
     args = parser.parse_args()
+    config.MIN_PRICE_THRESHOLD = args.min_price
+    config.MAX_PRICE_THRESHOLD = args.max_price
     main(args.file_name)
-

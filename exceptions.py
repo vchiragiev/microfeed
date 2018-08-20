@@ -1,10 +1,10 @@
 class CorruptedMessageError(Exception):
-    def __init__(self, error, innerException = None):
+    def __init__(self, error, inner_exception=None):
         Exception.__init__(self, error)
-        self.innerException = innerException
+        self.inner_exception = inner_exception
 
 
 class InvalidValueError(Exception):
-    def __init__(self, error, innerException = None):
+    def __init__(self, error, inner_exception=None):
         Exception.__init__(self, error)
-        self.innerException = innerException
+        self.inner_exception = inner_exception
