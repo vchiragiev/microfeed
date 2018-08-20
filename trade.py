@@ -26,6 +26,11 @@ class Trade:
     def to_string(self):
         return str.format("quantity={} price={}", self.quantity, self.price)
 
+    def __eq__(self, other):
+        if isinstance(other, Trade):
+            return self.quantity == other.quantity and self.price == other.price
+        return False
+
 
 class TradeMessage:
 

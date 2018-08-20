@@ -11,10 +11,10 @@ class FeedHandler:
     def __init__(self):
         self.messages = list()
         self.orders_by_id: dict[int, Order] = dict()
-        self.s_orders_by_price = Tree(0)
-        self.b_orders_by_price = Tree(0)
-        self.expected_trades: [TradeMessage] = []
-        self.expected_orders: [int, OrderMessage] = dict()
+        self.s_orders_by_price = Tree(0)  # add an artificial head with ZERO price.
+        self.b_orders_by_price = Tree(0)  # The tree.right node will actually be the head
+        self.expected_trades: [Trade] = []
+        self.expected_orders: [int, int] = dict()
 
     def process_matched_orders(self, new_order: Order, matched_order_node: Tree):
         matched_order = matched_order_node.orders[0]
@@ -41,7 +41,7 @@ class FeedHandler:
             matched_order.quantity = matched_order.quantity - new_order.quantity
             self.expected_trades.append(TradeMessage(ActionEnum.T, new_order.quantity, matched_order.price))
             self.expected_orders[new_order.order_id] = OrderMessage(ActionEnum.X, new_order.clone())
-            self.expected_orders[matched_order.order_id] = OrderMessage(ActionEnum.M, matched_order.clone())
+            # self.expected_orders[matched_order.order_id] = OrderMessage(ActionEnum.M, matched_order.clone())
             new_order.quantity = 0
 
         # new_order.qty < matched_order.qty
@@ -54,7 +54,7 @@ class FeedHandler:
             new_order.quantity = new_order.quantity - matched_order.quantity
             self.expected_trades.append(TradeMessage(ActionEnum.T, matched_order.quantity, matched_order.price))
             self.expected_orders[new_order.order_id] = OrderMessage(ActionEnum.M, new_order.clone())
-            self.expected_orders[matched_order.order_id] = OrderMessage(ActionEnum.X, matched_order.clone())
+            # self.expected_orders[matched_order.order_id] = OrderMessage(ActionEnum.X, matched_order.clone())
             matched_order_node.orders.pop(0)
             if len(matched_order_node.orders) == 0:
                 matched_order_node.remove_me()
@@ -95,8 +95,17 @@ class FeedHandler:
                 # try to fill again : recursive call
                 self.process_buy_order(b_order)
 
-    def process_trade(self, trade: Trade):
-        a = 1
+    def process_trade_message(self, trade_message: TradeMessage):
+        while len(self.expected_trades) > 0:
+            if trade_message.trade == self.expected_trades.pop(0):
+                # found the expected trade.
+                return
+
+        # the trade was not found. report a TradeWithNoOrder error
+        ErrorsDictionary.add(ErrorEnum.TradeWithNoOrder, trade_message.trade.to_string())
+
+    def process_order_message(self, order_message: OrderMessage):
+        return
 
     def process_message(self, values):
         action_str = list.pop(values, 0)
@@ -104,11 +113,12 @@ class FeedHandler:
             action = ActionEnum[action_str]
             if action == ActionEnum.T:
                 msg = TradeMessage(action, values)
-                self.messages.append(msg)
+                self.process_trade(msg.trade)
             else:
                 msg = OrderMessage(action, values)
                 self.messages.append(msg)
                 if msg.order.side == SideEnum.S:
+
                     self.s_orders_by_price.insert(msg.order.price, msg.order)
                 else: # Buy
                     self.b_orders_by_price.insert(msg.order.price, msg.order)
