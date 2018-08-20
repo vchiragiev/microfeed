@@ -108,6 +108,10 @@ class FeedHandler:
             else:
                 msg = OrderMessage(action, values)
                 self.messages.append(msg)
+                if msg.order.side == SideEnum.S:
+                    self.s_orders_by_price.insert(msg.order.price, msg.order)
+                else: # Buy
+                    self.b_orders_by_price.insert(msg.order.price, msg.order)
         except KeyError as er:
             ErrorsDictionary.add(ErrorEnum.CorruptedMessage, self.format_error(action_str, values, "Invalid Action"))
         except CorruptedMessageError as er:
@@ -117,15 +121,15 @@ class FeedHandler:
 
     def print_book(self):
         print(">>> Book <<<")
-        self.s_orders.right.travers_reverse(lambda node: self.print_node("S", node))
+        self.s_orders_by_price.right.travers_reverse(lambda node: self.print_node("S", node))
         print("---")
-        self.b_orders.right.travers(lambda node: self.print_node("B", node))
+        self.b_orders_by_price.right.travers(lambda node: self.print_node("B", node))
 
     @staticmethod
     def format_error(action, body, error):
         return str.format("Action:[{}] Body{} Error[{}]", action, body, error)
 
     @staticmethod
-    def print_node(side, node):
-        quantities = ",".join(side + str(order.quantity) for order in node.data)
-        print(node.key, quantities)
+    def print_node(side, node: Tree):
+        quantities = ",".join(side + str(order.quantity) for order in node.orders)
+        print(node.price, "")
