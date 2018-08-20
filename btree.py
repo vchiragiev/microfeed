@@ -1,5 +1,6 @@
 from order import Order
 
+
 class Tree:
     def __init__(self, price, order=None, parent=None):
         self.parent: Tree = parent
@@ -41,7 +42,7 @@ class Tree:
 
     def keys_to_list(self):
         result = list()
-        self.travers(lambda x: result.append(x.key))
+        self.travers(lambda x: result.append(x.price))
         return result
 
     def find_leftmost_node(self):
