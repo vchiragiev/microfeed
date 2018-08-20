@@ -2,6 +2,7 @@ from typing import List
 from exceptions import CorruptedMessageError, InvalidValueError
 import config
 
+
 class Trade:
     def __init__(self, quantity: int, price: float):
         self.quantity = quantity

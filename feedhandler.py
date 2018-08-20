@@ -9,6 +9,7 @@ from btree import Tree
 from enums import SideEnum
 import config
 
+
 class FeedHandler:
     def __init__(self):
         self.orders_by_id: Dict[int, Order] = dict()
@@ -28,7 +29,7 @@ class FeedHandler:
         # new_order fully filled nothing else to do
         if new_order.quantity == matched_order.quantity:
             new_order.quantity = 0
-            self.expected_trades.append(Trade(matched_order.quantity, matched_order.price)) # add expected Trade
+            self.expected_trades.append(Trade(matched_order.quantity, matched_order.price))  # add expected Trade
             self.expected_x_orders.add(new_order.order_id)                    # add expected new_order(X)
             self.expected_x_orders.add(matched_order.order_id)                # add expected matched_order(X)
             self.orders_by_id.pop(matched_order_node.orders.pop(0).order_id)  # del matched_order from dict and tree
@@ -42,7 +43,7 @@ class FeedHandler:
         elif new_order.quantity < matched_order.quantity:
             new_order.quantity = 0
             matched_order.quantity = matched_order.quantity - new_order.quantity
-            self.expected_trades.append(Trade(new_order.quantity, matched_order.price)) # add expected Trade
+            self.expected_trades.append(Trade(new_order.quantity, matched_order.price))  # add expected Trade
             self.expected_x_orders.add(new_order.order_id)                     # add expected new_order(X)
 
         # new_order.qty > matched_order.qty
