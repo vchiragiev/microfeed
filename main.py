@@ -5,12 +5,10 @@ import config
 from enums import ActionEnum
 
 
-def main(file_name):
-    csv_file = open(file_name, "r")
-    csv_file_reader = csv.reader(csv_file)
+def process_messages(messages):
     feed_handler = FeedHandler()
     counter: int = 0
-    for messageValues in csv_file_reader:
+    for messageValues in messages:
         counter += 1
         action = feed_handler.process_message(messageValues)
         if counter % 10 == 0:
@@ -25,9 +23,15 @@ def main(file_name):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process messages')
     parser.add_argument('file_name')
-    parser.add_argument('--min_price', required=False, type=float, help="min price threshold", default=0.001)
-    parser.add_argument('--max_price', required=False, type=float, help="max price threshold", default=1100)
+    parser.add_argument('--min_price', required=False, type=float, help="min price threshold",
+                        default=config.MIN_PRICE_THRESHOLD)
+    parser.add_argument('--max_price', required=False, type=float, help="max price threshold",
+                        default=config.MAX_PRICE_THRESHOLD)
     args = parser.parse_args()
     config.MIN_PRICE_THRESHOLD = args.min_price
     config.MAX_PRICE_THRESHOLD = args.max_price
-    main(args.file_name)
+
+    csv_file = open(args.file_name, "r")
+    csv_file_reader = csv.reader(csv_file)
+    process_messages(csv_file_reader)
+

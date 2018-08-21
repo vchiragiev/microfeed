@@ -199,7 +199,6 @@ class FeedHandler:
             # Trade
             if action == ActionEnum.T:
                 self.process_trade(Trade.parse(values))
-                return action;
             # Order
             else:
                 self.report_any_expected_trades_as_missing()
@@ -257,4 +256,4 @@ class FeedHandler:
             return (best_sell_price + best_buy_price) / 2
 
     def print_recent_price_trades(self):
-        print (str.format("RecentPriceTrade={}@{}", self.recent_trade_qty, self.recent_trade_price))
+        print(str.format("RecentPriceTrade={}@{}", self.recent_trade_qty, self.recent_trade_price))
