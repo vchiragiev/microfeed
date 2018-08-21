@@ -5,7 +5,7 @@ from typing import Dict, List
 class ErrorsDictionary:
 
     def __init__(self):
-        self.__errors_dict__: Dict[ErrorEnum, List] = \
+        self._errors_dict: Dict[ErrorEnum, List] = \
             {
                 ErrorEnum.CorruptedMessage: list(),
                 ErrorEnum.InvalidValue: list(),
@@ -16,9 +16,9 @@ class ErrorsDictionary:
             }
 
     def add(self, error_enum, error_message):
-        self.__errors_dict__[error_enum].append(error_message)
+        self._errors_dict[error_enum].append(error_message)
 
     def print(self):
-        for key in self.__errors_dict__:
-            for error in self.__errors_dict__[key]:
+        for key in self._errors_dict:
+            for error in self._errors_dict[key]:
                 print(str.format("{}:{}", key, error))
