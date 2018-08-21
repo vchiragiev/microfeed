@@ -4,6 +4,7 @@ import config
 
 
 class Trade:
+    # TODO: encapsulate properties ("private" or "readonly")
     def __init__(self, qty: int, price: float):
         self.qty = qty
         self.price = price

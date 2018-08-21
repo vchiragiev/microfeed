@@ -5,6 +5,7 @@ import config
 
 
 class Order:
+    # TODO: encapsulate properties ("private" or "readonly")
     def __init__(self, order_id: int, side: SideEnum, qty: int, price: float):
 
         #  if MAX_PRICE >= price <= MIN_PRICE:
