@@ -5,7 +5,7 @@ import config
 
 
 class Order:
-    def __init__(self, order_id: int, side: SideEnum, quantity: int, price: float):
+    def __init__(self, order_id: int, side: SideEnum, qty: int, price: float):
 
         #  if MAX_PRICE >= price <= MIN_PRICE:
         #  raise InvalidValueError("Invalid price: " + str(self.price))
@@ -13,7 +13,7 @@ class Order:
 
         self.order_id = order_id
         self.side = side
-        self.quantity = quantity
+        self.qty = qty
         self.price = price
 
     @classmethod
@@ -32,7 +32,7 @@ class Order:
             raise InvalidValueError("Invalid orderId: " + str(order_id))
 
         if quantity <= 0:
-            raise InvalidValueError("Invalid quantity: " + str(quantity))
+            raise InvalidValueError("Invalid qty: " + str(quantity))
 
         if config.MIN_PRICE_THRESHOLD >= price or price >= config.MAX_PRICE_THRESHOLD:
             raise InvalidValueError("Invalid price: " + str(price))
@@ -40,5 +40,5 @@ class Order:
         return cls(order_id, side, quantity, price)
 
     def to_string(self):
-        return str.format("orderId={} side={} quantity={} price={}",
-                          self.order_id, self.side, self.quantity, self.price)
+        return str.format("orderId={} side={} qty={} price={}",
+                          self.order_id, self.side, self.qty, self.price)

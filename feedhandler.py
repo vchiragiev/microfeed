@@ -1,4 +1,4 @@
-from typing import Set, Deque, Dict
+from typing import Set, Deque, Dict, List
 from collections import deque
 from enums import ErrorEnum, ActionEnum
 from exceptions import CorruptedMessageError, InvalidValueError
@@ -13,11 +13,14 @@ import config
 class FeedHandler:
     def __init__(self):
         self.orders_by_id: Dict[int, Order] = dict()
-        self.s_orders_by_price: Tree = Tree(config.MAX_PRICE_THRESHOLD)  # add an artificial head.
-        self.b_orders_by_price: Tree = Tree(config.MIN_PRICE_THRESHOLD)  # add an artificial head.
+        self.s_orders_by_price: Tree = Tree(config.MAX_PRICE_THRESHOLD)  # add an artificial root.
+        self.b_orders_by_price: Tree = Tree(config.MIN_PRICE_THRESHOLD)  # add an artificial root.
         self.expected_trades: Deque[Trade] = deque()     # expected trades when new orders coming in
         self.expected_x_orders: Set[int] = set()         # orders to be deleted as result of expected trades
+        self.last_trade_price_history: List = list()
         self.errors = ErrorsDictionary()
+        self.recent_trade_price: float = config.MAX_PRICE_THRESHOLD
+        self.recent_trade_qty: int = 0
 
     def process_matched_orders(self, new_order: Order, matched_order_node: Tree):
         matched_order = matched_order_node.orders[0]
@@ -27,12 +30,12 @@ class FeedHandler:
         # 2. remove matched_order from the book
         # 3. remove the node from the tree if no more orders with same price
         # new_order fully filled nothing else to do
-        if new_order.quantity == matched_order.quantity:
-            self.expected_trades.append(Trade(matched_order.quantity, matched_order.price))  # add expected Trade
+        if new_order.qty == matched_order.qty:
+            self.expected_trades.append(Trade(matched_order.qty, matched_order.price))  # add expected Trade
             self.expected_x_orders.add(new_order.order_id)                    # add expected new_order(X)
             self.expected_x_orders.add(matched_order.order_id)                # add expected matched_order(X)
             self.orders_by_id.pop(matched_order_node.orders.popleft().order_id)  # del matched_order from dict and tree
-            new_order.quantity = 0
+            new_order.qty = 0
             if len(matched_order_node.orders) == 0:
                 matched_order_node.remove_me()
 
@@ -40,11 +43,11 @@ class FeedHandler:
         # 1. decrease matched_order.qty
         # 2. register expected messages: trade, new_order(X)
         # new_order fully filled nothing else to do
-        elif new_order.quantity < matched_order.quantity:
-            matched_order.quantity = matched_order.quantity - new_order.quantity
-            self.expected_trades.append(Trade(new_order.quantity, matched_order.price))  # add expected Trade
+        elif new_order.qty < matched_order.qty:
+            matched_order.qty = matched_order.qty - new_order.qty
+            self.expected_trades.append(Trade(new_order.qty, matched_order.price))  # add expected Trade
             self.expected_x_orders.add(new_order.order_id)                     # add expected new_order(X)
-            new_order.quantity = 0
+            new_order.qty = 0
 
         # new_order.qty > matched_order.qty
         # 1. decrease new_order.qty
@@ -53,8 +56,8 @@ class FeedHandler:
         # 4. remove the node from the tree if no more orders with the same price
         #    otherwise recursive call to try to fill the rest of qty
         else:
-            new_order.quantity = new_order.quantity - matched_order.quantity
-            self.expected_trades.append(Trade(matched_order.quantity, matched_order.price))
+            new_order.qty = new_order.qty - matched_order.qty
+            self.expected_trades.append(Trade(matched_order.qty, matched_order.price))
             self.expected_x_orders.add(matched_order.order_id)                    # add expected matched_order(X)
             self.orders_by_id.pop(matched_order_node.orders.popleft().order_id)  # del matched_order from dict and tree
             if len(matched_order_node.orders) == 0:
@@ -76,7 +79,7 @@ class FeedHandler:
         # try to fulfill
         else:
             self.process_matched_orders(s_order, b_order_node)
-            if s_order.quantity > 0:
+            if s_order.qty > 0:
                 # try to fulfill again : recursive call
                 self.process_add_sell_order(s_order)
 
@@ -94,7 +97,7 @@ class FeedHandler:
         # try to fulfill
         else:
             self.process_matched_orders(b_order, s_order_node)
-            if b_order.quantity > 0:
+            if b_order.qty > 0:
                 # try to fill again : recursive call
                 self.process_add_buy_order(b_order)
 
@@ -123,7 +126,7 @@ class FeedHandler:
         else:
             # if only qty changed then simply change qty
             if existing_order.side == order.side and existing_order.price == order.price:
-                existing_order.quantity = order.quantity
+                existing_order.qty = order.qty
 
             #  if side or price has changed then remove and re-add the order
             else:
@@ -155,26 +158,51 @@ class FeedHandler:
         if len(existing_node.orders) == 0:
             existing_node.remove_me()
 
+    def update_latest_price_trade_history(self, trade: Trade):
+        if self.recent_trade_price == trade.price:
+            self.recent_trade_qty += trade.qty
+        else:
+            self.recent_trade_price = trade.price
+            self.recent_trade_qty = trade.qty
+
     def process_trade(self, trade: Trade):
         # pop trades from expected_trades deque till match is found
         while len(self.expected_trades) > 0:
+            expected_trade = self.expected_trades.popleft()
+            self.update_latest_price_trade_history(expected_trade)
+
             # operator __eq__ is overloaded
-            if trade == self.expected_trades.popleft():
-                # found an expected trade. return without error
+            if trade == expected_trade:
+                # found expected trade. return without error
                 return
+            else:
+                # trade did not match. re
+                self.errors.add(ErrorEnum.MissingTrade, expected_trade.to_string())
 
         # trade was not found. report a TradeWithNoOrder error
         self.errors.add(ErrorEnum.TradeWithNoOrder, trade.to_string())
 
-    def process_message(self, values):
-        action_str = list.pop(values, 0)
+    def report_any_expected_trades_as_missing(self):
+        # pop trades from expected_trades deque and report
+        while len(self.expected_trades) > 0:
+            expected_trade = self.expected_trades.popleft()
+            self.update_latest_price_trade_history(expected_trade)
+            self.errors.add(ErrorEnum.MissingTrade, expected_trade.to_string())
+
+    def process_message(self, values: List):
+        if len(values) == 0:
+            # empty line. ignore
+            return None
+        action_str = values.pop(0)
         try:
             action = ActionEnum[action_str]
             # Trade
             if action == ActionEnum.T:
                 self.process_trade(Trade.parse(values))
+                return action;
             # Order
             else:
+                self.report_any_expected_trades_as_missing()
                 order = Order.from_list(values)
                 if action == ActionEnum.A:
                     self.process_add_order(order)
@@ -182,12 +210,14 @@ class FeedHandler:
                     self.process_modify_order(order)
                 else:  # action == ActionEnum.X:
                     self.process_remove_order(order)
+            return action
         except KeyError:
             self.errors.add(ErrorEnum.CorruptedMessage, self.format_error(action_str, values, "Invalid Action"))
         except CorruptedMessageError as er:
             self.errors.add(ErrorEnum.CorruptedMessage, self.format_error(action_str, values, er))
         except InvalidValueError as er:
             self.errors.add(ErrorEnum.InvalidValue, self.format_error(action_str, values, er))
+        return None
 
     def print_errors(self):
         self.errors.print()
@@ -198,11 +228,33 @@ class FeedHandler:
 
     @staticmethod
     def print_node(side, node: Tree):
-        quantities = ",".join(side + str(order.quantity) for order in node.orders)
+        quantities = ",".join(side + str(order.qty) for order in node.orders)
         print(node.price, quantities)
 
     def print_book(self):
-        print("\n>>> Book <<<")
-        self.s_orders_by_price.travers_reverse(lambda node: self.print_node("S", node))
-        print("---")
-        self.b_orders_by_price.travers_reverse(lambda node: self.print_node("B", node))
+        print("Book")
+
+        # sell's root is artificial MAX - skip to the left
+        if self.s_orders_by_price.left is not None:
+            self.s_orders_by_price.left.travers_reverse(lambda node: self.print_node("S", node))
+
+        # buy's root is artificial MIN - skip to the right
+        if self.b_orders_by_price.right is not None:
+            self.b_orders_by_price.right.travers_reverse(lambda node: self.print_node("B", node))
+
+    def print_mid_quote(self):
+        print(str.format("MidQuote={}", self.calculate_mid_quote()))
+
+    def calculate_mid_quote(self):
+        # sell's root is artificial MAX - skip to the left
+        # buy's root is artificial MIN - skip to the right
+
+        if self.s_orders_by_price.left is None or self.b_orders_by_price.right is None:
+            return "NAN"
+        else:
+            best_sell_price = self.s_orders_by_price.left.find_leftmost_node().price
+            best_buy_price = self.b_orders_by_price.right.find_rightmost_node().price
+            return (best_sell_price + best_buy_price) / 2
+
+    def print_recent_price_trades(self):
+        print (str.format("RecentPriceTrade={}@{}", self.recent_trade_qty, self.recent_trade_price))

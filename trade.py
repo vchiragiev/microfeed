@@ -4,8 +4,8 @@ import config
 
 
 class Trade:
-    def __init__(self, quantity: int, price: float):
-        self.quantity = quantity
+    def __init__(self, qty: int, price: float):
+        self.qty = qty
         self.price = price
 
     @classmethod
@@ -20,7 +20,7 @@ class Trade:
             raise InvalidValueError("Invalid value", ex)
 
         if quantity <= 0:
-            raise InvalidValueError("Invalid quantity: " + str(quantity))
+            raise InvalidValueError("Invalid qty: " + str(quantity))
 
         if config.MIN_PRICE_THRESHOLD >= price or price >= config.MAX_PRICE_THRESHOLD:
             raise InvalidValueError("Invalid price: " + str(price))
@@ -28,9 +28,9 @@ class Trade:
         return cls(quantity, price)
 
     def to_string(self):
-        return str.format("quantity={} price={}", self.quantity, self.price)
+        return str.format("qty={} price={}", self.qty, self.price)
 
     def __eq__(self, other):
         if isinstance(other, Trade):
-            return self.quantity == other.quantity and self.price == other.price
+            return self.qty == other.qty and self.price == other.price
         return False
