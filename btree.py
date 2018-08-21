@@ -4,6 +4,7 @@ from typing import Deque
 
 
 class Tree:
+    # TODO: encapsulate properties ("private" or "readonly")
     def __init__(self, price, order=None, parent=None):
         self.parent: Tree = parent
         self.left: Tree = None
